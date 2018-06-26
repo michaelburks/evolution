@@ -381,7 +381,6 @@ func bestPerformers(in pool:[(Function, Int)], _ h: Heuristic, count: Int, sibli
     idx += 1
   }
 
-  print(bestParents)
   return best
 }
 
