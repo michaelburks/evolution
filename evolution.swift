@@ -44,7 +44,7 @@ extension Double {
   }
 }
 
-// MARK: Function protocol
+// MARK: Function Defintion
 protocol Function {
   func eval(_ input: Double) -> (Double)
 
@@ -141,19 +141,19 @@ class Constant: Function {
     return String(c)
   }
 
+  func mutate() -> Function {
+    return [Constant(c-1), Constant(c+1), Constant(c * 0.9), Constant(c * 1.1)].rand
+  }
+
   class var rand: Constant {
     get {
       let z = Double(arc4random_uniform(21))
       return Constant(z-10)
     }
   }
-
-  func mutate() -> Function {
-    return [Constant(c-1), Constant(c+1), Constant(c * 0.9), Constant(c * 1.1)].rand
-  }
 }
 
-// MARK: Unary Operations
+// MARK: Unary Operation Definition
 class UnaryOp: Function {
   let val: Function
   let op: (Double) -> Double
@@ -194,48 +194,7 @@ extension UnaryOp: Deletable {
   }
 }
 
-extension UnaryOp {
-  static func negate(_ val: Function) -> Self {
-    return self.init(val, (-), "-")
-  }
-
-  static func square(_ val: Function) -> Self {
-    let sq = { (x: Double) -> Double in return x * x }
-    return self.init(val, sq, "square")
-  }
-
-  static func squareRoot(_ val: Function) -> Self {
-    return self.init(val, sqrt, "sqrt")
-  }
-
-  static func naturalLog(_ val: Function) -> Self {
-    return self.init(val, log, "ln")
-  }
-
-  static func exponential(_ val: Function) -> Self {
-    return self.init(val, exp, "exp")
-  }
-
-  static func sine(_ val: Function) -> Self {
-    return self.init(val, sin, "sin")
-  }
-
-  static func cosine(_ val: Function) -> Self {
-    return self.init(val, cos, "cos")
-  }
-
-  static func tangent(_ val: Function) -> Self {
-    return self.init(val, tan, "tan")
-  }
-
-  class var rand: (_ val: Function) -> UnaryOp {
-    get {
-      return [self.negate, self.square, self.squareRoot, self.naturalLog, self.exponential, self.sine, self.cosine, self.tangent].rand
-    }
-  }
-}
-
-// MARK: Binary Operations
+// MARK: Binary Operation Definition
 class BinaryOp: Function {
   let vals: [Function]
   let op: (Double, Double) -> Double
@@ -282,6 +241,49 @@ extension BinaryOp: Deletable {
   }
 }
 
+// MARK: Operations
+
+extension UnaryOp {
+  static func negate(_ val: Function) -> Self {
+    return self.init(val, (-), "-")
+  }
+
+  static func square(_ val: Function) -> Self {
+    let sq = { (x: Double) -> Double in return x * x }
+    return self.init(val, sq, "square")
+  }
+
+  static func squareRoot(_ val: Function) -> Self {
+    return self.init(val, sqrt, "sqrt")
+  }
+
+  static func naturalLog(_ val: Function) -> Self {
+    return self.init(val, log, "ln")
+  }
+
+  static func exponential(_ val: Function) -> Self {
+    return self.init(val, exp, "exp")
+  }
+
+  static func sine(_ val: Function) -> Self {
+    return self.init(val, sin, "sin")
+  }
+
+  static func cosine(_ val: Function) -> Self {
+    return self.init(val, cos, "cos")
+  }
+
+  static func tangent(_ val: Function) -> Self {
+    return self.init(val, tan, "tan")
+  }
+
+  class var rand: (_ val: Function) -> UnaryOp {
+    get {
+      return [self.negate, self.square, self.squareRoot, self.naturalLog, self.exponential, self.sine, self.cosine, self.tangent].rand
+    }
+  }
+}
+
 extension BinaryOp {
   class func add(_ val1: Function, _ val2: Function) -> Self {
     return self.init(val1, val2, (+), "+")
@@ -310,7 +312,7 @@ extension BinaryOp {
   }
 }
 
-// Mark: Training
+// MARK: Training
 
 typealias Heuristic = (Double) -> Double
 
@@ -320,7 +322,7 @@ func train(_ h: Heuristic) -> [Function] {
   let topCount = 60
   let siblingMax = 2
 
-  // Halt evolution before all survivors may be descendants of a single parent.
+  // Prevent evolution from running to the point where all survivors might have a common ancestor.
   let maxGenerations = Int(log(Double(topCount)) / log(Double(siblingMax)))
 
   var best: [Function] = Array(repeating: Input(), count: topCount)
@@ -331,6 +333,9 @@ func train(_ h: Heuristic) -> [Function] {
   while gen < maxGenerations && bestScore > 0.0 {
     print("Generation", gen)
 
+    // TODO: Sex
+
+    // Store child functions with index of parent.
     var pool = [(Function, Int)]()
 
     for _ in 0..<batchSize {
@@ -338,6 +343,7 @@ func train(_ h: Heuristic) -> [Function] {
         pool.append((j, idx))
         var z = j
         for _ in 0..<depth {
+          // Add mutant children.
           z = z.mutate()
           pool.append((z, idx))
         }
@@ -354,7 +360,10 @@ func train(_ h: Heuristic) -> [Function] {
   return best
 }
 
+// Select most viable children from pool.
 func bestPerformers(in pool:[(Function, Int)], _ h: Heuristic, count: Int, siblingMax: Int) -> [Function] {
+
+  // [(Function, Parent Index, Score)]
   var scores = [(Function, Int, Double)]()
 
   for (f, i) in pool {
@@ -378,6 +387,8 @@ func bestPerformers(in pool:[(Function, Int)], _ h: Heuristic, count: Int, sibli
   while best.count < count && idx < scores.count {
     let (f, p, s) = scores[idx]
     let survivingSiblings = bestParents.filter { $0 == p }.count
+
+    // Limit number of survivors from a single parent to promote function diversity.
     if !bestScores.contains(s) && survivingSiblings < siblingMax {
       bestScores.append(s)
       bestParents.append(p)
@@ -389,9 +400,11 @@ func bestPerformers(in pool:[(Function, Int)], _ h: Heuristic, count: Int, sibli
   return best
 }
 
+// Score function againt the heuristic.
 func score(_ f: Function, _ h: Heuristic) -> Double {
   var sc = 0.0
 
+  // Compute the sum of square of differences for inputs 0 to 99.
   for x in 0..<100 {
     let y = f.eval(Double(x))
     let z = h(Double(x))
@@ -399,9 +412,12 @@ func score(_ f: Function, _ h: Heuristic) -> Double {
     let diff = z - y
     sc += diff * diff
   }
+
+  // Weight the score by the length of the function to encourage simplicity.
   return sc * log(Double(f.length) + 4.0)
 }
 
+// This is the function to learn.
 func goal(_ x: Double) -> Double {
   return x * x * x + 4 * sin(x)
 }
