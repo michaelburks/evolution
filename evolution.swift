@@ -1,6 +1,8 @@
 #!/usr/bin/swift
 import Foundation
 
+// MARK: Random Helpers
+
 extension Int {
   static func rand(_ upperBound: Int) -> Int {
     return Int(arc4random_uniform(UInt32(upperBound)))
@@ -16,35 +18,8 @@ extension Array {
   }
 }
 
-extension Double {
-  var isInteger: Bool {
-    get {
-      return self == floor(self)
-    }
-  }
+// MARK: Function Definition
 
-  var isSquare: Bool {
-    get {
-      let r = sqrt(self)
-      return self.isInteger && r.isInteger
-    }
-  }
-
-  var isTriangle: Bool {
-    get {
-      return self.isInteger && (8 * self + 1).isSquare
-    }
-  }
-
-  var isFibonacci: Bool {
-    get {
-      return self.isInteger && self >= 0 &&
-        ((5 * self * self + 4).isSquare || (5 * self * self - 4).isSquare)
-    }
-  }
-}
-
-// MARK: Function Defintion
 protocol Function {
   func eval(_ input: Double) -> (Double)
 
@@ -102,7 +77,8 @@ extension Function {
   }
 }
 
-// MARK: Input
+// MARK: Input Definition
+
 class Input: Function {
   func eval(_ input: Double) -> (Double) {
     return input
@@ -119,7 +95,8 @@ class Input: Function {
   }
 }
 
-// MARK: Constants
+// MARK: Constant Definition
+
 class Constant: Function {
   let c: Double
 
@@ -154,6 +131,7 @@ class Constant: Function {
 }
 
 // MARK: Unary Operation Definition
+
 class UnaryOp: Function {
   let val: Function
   let op: (Double) -> Double
@@ -195,6 +173,7 @@ extension UnaryOp: Deletable {
 }
 
 // MARK: Binary Operation Definition
+
 class BinaryOp: Function {
   let vals: [Function]
   let op: (Double, Double) -> Double
