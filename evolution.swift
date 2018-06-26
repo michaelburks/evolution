@@ -7,6 +7,15 @@ extension Int {
   }
 }
 
+extension Array {
+  var rand: Element {
+    get {
+      let i = Int.rand(self.count)
+      return self[i]
+    }
+  }
+}
+
 extension Double {
   var isInteger: Bool {
     get {
@@ -35,6 +44,7 @@ extension Double {
   }
 }
 
+// MARK: Function protocol
 protocol Function {
   func eval(_ input: Double) -> (Double)
 
@@ -92,15 +102,7 @@ extension Function {
   }
 }
 
-extension Array {
-  var rand: Element {
-    get {
-      let i = Int.rand(self.count)
-      return self[i]
-    }
-  }
-}
-
+// MARK: Input
 class Input: Function {
   func eval(_ input: Double) -> (Double) {
     return input
@@ -117,6 +119,7 @@ class Input: Function {
   }
 }
 
+// MARK: Constants
 class Constant: Function {
   let c: Double
 
@@ -150,6 +153,7 @@ class Constant: Function {
   }
 }
 
+// MARK: Unary Operations
 class UnaryOp: Function {
   let val: Function
   let op: (Double) -> Double
@@ -231,6 +235,7 @@ extension UnaryOp {
   }
 }
 
+// MARK: Binary Operations
 class BinaryOp: Function {
   let vals: [Function]
   let op: (Double, Double) -> Double
@@ -305,7 +310,8 @@ extension BinaryOp {
   }
 }
 
-// x, s(x) -> score
+// Mark: Training
+
 typealias Heuristic = (Double) -> Double
 
 func train(_ h: Heuristic) -> [Function] {
@@ -314,18 +320,16 @@ func train(_ h: Heuristic) -> [Function] {
   let topCount = 60
   let siblingMax = 2
 
-  let scoreThreshold = 100.0
-
+  // Halt evolution before all survivors may be descendants of a single parent.
   let maxGenerations = Int(log(Double(topCount)) / log(Double(siblingMax)))
 
   var best: [Function] = Array(repeating: Input(), count: topCount)
 
+  var gen = 0
   var bestScore = Double.greatestFiniteMagnitude
 
-  var gen = 0
-
-  while bestScore > scoreThreshold && gen < maxGenerations {
-    print("generation", gen)
+  while gen < maxGenerations && bestScore > 0.0 {
+    print("Generation", gen)
 
     var pool = [(Function, Int)]()
 
@@ -342,9 +346,10 @@ func train(_ h: Heuristic) -> [Function] {
 
     best = bestPerformers(in: pool, h, count: topCount, siblingMax: siblingMax)
     bestScore = score(best[0], h)
+    print("Best score:", bestScore)
     gen += 1
   }
-  print("Finished training after", gen, "generations with best score:", bestScore)
+  print("Finished training after", gen, "generations.")
 
   return best
 }
@@ -398,7 +403,7 @@ func score(_ f: Function, _ h: Heuristic) -> Double {
 }
 
 func goal(_ x: Double) -> Double {
-  return x * x * x - 1.5 * sqrt(x) + 7
+  return x * x * x + 4 * sin(x)
 }
 
 let top = train(goal)
